@@ -19,19 +19,20 @@ export default async function AppLayout({
     redirect("/login");
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
-
-  const { data: business } = await supabase
-    .from("businesses")
-    .select("*")
-    .eq("created_by", user.id)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .single();
+  const [{ data: profile }, { data: business }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("full_name, avatar_url")
+      .eq("id", user.id)
+      .single(),
+    supabase
+      .from("businesses")
+      .select("name")
+      .eq("created_by", user.id)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .single(),
+  ]);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background relative">

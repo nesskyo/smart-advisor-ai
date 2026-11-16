@@ -2,7 +2,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import { getCurrentBusinessId } from "@/lib/business";
 import { MetricCard } from "@/components/dashboard/metric-card";
 import { AIInsightCard } from "@/components/dashboard/ai-insight-card";
 import { SimpleLineChart } from "@/components/charts/base-charts";
@@ -48,22 +47,33 @@ export default function DashboardPage() {
         return;
       }
 
-      const businessId = await getCurrentBusinessId();
-      if (!businessId) {
+      const [{ data: business }, { data: profile }] = await Promise.all([
+        supabase
+          .from("businesses")
+          .select("id, name")
+          .eq("created_by", user.id)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .single(),
+        supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", user.id)
+          .single(),
+      ]);
+
+      if (!business) {
         setLoading(false);
         return;
       }
 
-      const { data: biz } = await supabase.from("businesses").select("name").eq("id", businessId).single();
-      setBusinessName(biz?.name ?? "UMKM Saya");
-
-      const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
+      setBusinessName(business.name ?? "UMKM Saya");
       setOwner(profile?.full_name ?? "Pengguna");
 
       const { data: transactions } = await supabase
         .from("transactions")
         .select("*, transaction_items(*, products(name))")
-        .eq("business_id", businessId)
+        .eq("business_id", business.id)
         .eq("status", "Selesai")
         .order("created_at", { ascending: false })
         .limit(500);
