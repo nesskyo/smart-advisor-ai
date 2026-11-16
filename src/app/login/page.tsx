@@ -15,41 +15,51 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState("Memverifikasi akun...");
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    const { data, error: authError } = await supabase.auth.signInWithPassword({
-      email: email.trim().toLowerCase(),
-      password,
-    });
+    try {
+      setLoadingMessage("Memverifikasi akun...");
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
 
-    if (authError) {
-      setLoading(false);
-      if (authError.code === "invalid_credentials" || authError.status === 400) {
-        setError(
-          "Email atau password tidak sesuai. Periksa kembali, atau gunakan tombol “Lupa password?” untuk memperbarui password Anda."
-        );
-      } else {
-        setError(authError.message);
+      if (authError) {
+        if (authError.code === "invalid_credentials" || authError.status === 400) {
+          setError(
+            "Email atau password tidak sesuai. Periksa kembali, atau gunakan tombol “Lupa password?” untuk memperbarui password Anda."
+          );
+        } else {
+          setError(authError.message);
+        }
+        return;
       }
-      return;
-    }
 
-    const businessError = await ensureBusinessForUser(
-      data.user.id,
-      data.user.user_metadata?.business_name
-    );
-    if (businessError) {
+      setLoadingMessage("Menyiapkan data bisnis...");
+      const businessError = await ensureBusinessForUser(
+        data.user.id,
+        data.user.user_metadata?.business_name
+      );
+      if (businessError) {
+        setError(`Berhasil masuk, tetapi ${businessError}`);
+        return;
+      }
+
+      router.push("/dashboard");
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? `Gagal menghubungi server: ${error.message}`
+          : "Gagal menghubungi server. Periksa koneksi internet lalu coba lagi."
+      );
+    } finally {
       setLoading(false);
-      setError(`Berhasil masuk, tetapi ${businessError}`);
-      return;
     }
-
-    setLoading(false);
-    router.push("/dashboard");
   };
 
   return (
@@ -93,7 +103,7 @@ export default function LoginPage() {
           </div>
           {error && <p className="text-sm text-critical">{error}</p>}
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Masuk..." : "Masuk"}
+            {loading ? loadingMessage : "Masuk"}
           </Button>
         </form>
 
