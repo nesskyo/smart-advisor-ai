@@ -7,6 +7,7 @@ import { TrendingUp } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabaseClient";
+import { ensureBusinessForUser } from "@/lib/business";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -68,6 +69,17 @@ export default function LoginPage() {
       return;
     }
 
+    const businessError = await ensureBusinessForUser(
+      data.user.id,
+      data.user.user_metadata?.business_name
+    );
+    if (businessError) {
+      setLoading(false);
+      setError(`Berhasil masuk, tetapi ${businessError}`);
+      return;
+    }
+
+    setLoading(false);
     router.push("/dashboard");
     router.refresh();
   };

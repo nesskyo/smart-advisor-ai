@@ -7,6 +7,7 @@ import { TrendingUp } from "@/components/ui/icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabaseClient";
+import { ensureBusinessForUser } from "@/lib/business";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -15,11 +16,13 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
+    setMessage("");
     setLoading(true);
 
     const { data, error: authError } = await supabase.auth.signUp({
@@ -36,15 +39,25 @@ export default function RegisterPage() {
       return;
     }
 
-    if (data.user) {
-      const { error: bizError } = await supabase.from("businesses").insert({
-        created_by: data.user.id,
-        name: businessName,
-      });
+    if (!data.user) {
+      setError("Akun tidak berhasil dibuat. Silakan coba lagi.");
+      setLoading(false);
+      return;
+    }
 
-      if (bizError) {
-        console.error("Business creation error:", bizError);
-      }
+    if (!data.session) {
+      setMessage(
+        "Akun berhasil dibuat. Periksa email Anda untuk verifikasi, lalu masuk. Data bisnis akan disiapkan setelah Anda masuk."
+      );
+      setLoading(false);
+      return;
+    }
+
+    const businessError = await ensureBusinessForUser(data.user.id, businessName);
+    if (businessError) {
+      setError(`Akun berhasil dibuat, tetapi ${businessError}`);
+      setLoading(false);
+      return;
     }
 
     setLoading(false);
@@ -106,6 +119,7 @@ export default function RegisterPage() {
             />
           </div>
           {error && <p className="text-sm text-critical">{error}</p>}
+          {message && <p className="text-sm text-primary">{message}</p>}
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Membuat akun..." : "Buat Akun"}
           </Button>

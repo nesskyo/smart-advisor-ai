@@ -1,25 +1,20 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { getSupabaseConfig } from "@/lib/supabaseConfig";
 
 const PUBLIC_PATHS = ["/login", "/register", "/forgot-password", "/reset-password", "/"];
 
 export async function updateSession(request: NextRequest) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const config = getSupabaseConfig();
 
   // Jika Supabase belum dikonfigurasi, lewati proteksi agar aplikasi tetap bisa dirender.
-  if (
-    !url ||
-    !anonKey ||
-    url === "your-supabase-url" ||
-    anonKey === "your-supabase-anon-key"
-  ) {
+  if (!config) {
     return NextResponse.next({ request });
   }
 
   let supabaseResponse = NextResponse.next({ request });
 
-  const supabase = createServerClient(url, anonKey, {
+  const supabase = createServerClient(config.url, config.key, {
     cookies: {
       getAll() {
         return request.cookies.getAll();

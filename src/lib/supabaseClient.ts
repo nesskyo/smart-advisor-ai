@@ -1,5 +1,6 @@
 import { createBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { getSupabaseConfig } from "@/lib/supabaseConfig";
 
 let _supabase: SupabaseClient | null = null;
 
@@ -28,25 +29,18 @@ function clearLegacyAuthStorage(url: string) {
 function getSupabaseClient(): SupabaseClient {
   if (_supabase) return _supabase;
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (
-    !url ||
-    !anonKey ||
-    url === "your-supabase-url" ||
-    anonKey === "your-supabase-anon-key"
-  ) {
+  const config = getSupabaseConfig();
+  if (!config) {
     throw new Error(
-      "Supabase belum dikonfigurasi. Isi NEXT_PUBLIC_SUPABASE_URL dan NEXT_PUBLIC_SUPABASE_ANON_KEY di file .env.local terlebih dahulu."
+      "Supabase belum dikonfigurasi. Isi NEXT_PUBLIC_SUPABASE_URL dan NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (atau NEXT_PUBLIC_SUPABASE_ANON_KEY) di file .env.local terlebih dahulu."
     );
   }
 
   if (typeof window !== "undefined") {
-    clearLegacyAuthStorage(url);
+    clearLegacyAuthStorage(config.url);
   }
 
-  _supabase = createBrowserClient(url, anonKey);
+  _supabase = createBrowserClient(config.url, config.key);
   return _supabase;
 }
 

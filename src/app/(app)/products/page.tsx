@@ -35,7 +35,9 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
   const [categorySearch, setCategorySearch] = useState("");
+  const [categoryFeedback, setCategoryFeedback] = useState("");
   const [feedback, setFeedback] = useState("");
   const [savedProduct, setSavedProduct] = useState<ProductWithCategory | null>(null);
   const [activeQrProduct, setActiveQrProduct] = useState<ProductWithCategory | null>(null);
@@ -117,6 +119,39 @@ export default function ProductsPage() {
     setCategorySearch("");
     setNewProduct({ name: "", categoryId: "", price: "", stock: "", minStock: "" });
     setFeedback("Produk berhasil ditambahkan.");
+  };
+
+  const handleAddCategory = async () => {
+    const name = categorySearch.trim();
+    if (!name) return;
+
+    const existingCategory = categories.find(
+      (category) => category.name.toLowerCase() === name.toLowerCase()
+    );
+    if (existingCategory) {
+      setNewProduct((prev) => ({ ...prev, categoryId: existingCategory.id }));
+      return;
+    }
+
+    setIsCreatingCategory(true);
+    setCategoryFeedback("");
+    try {
+      const { data, error } = await supabase
+        .from("product_categories")
+        .insert({ name })
+        .select("*")
+        .single();
+
+      if (error) {
+        setCategoryFeedback(`Gagal menambahkan kategori: ${error.message}`);
+        return;
+      }
+
+      setCategories((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+      setNewProduct((prev) => ({ ...prev, categoryId: data.id }));
+    } finally {
+      setIsCreatingCategory(false);
+    }
   };
 
   const handleEditProduct = async (product: ProductWithCategory) => {
@@ -249,7 +284,11 @@ export default function ProductsPage() {
               <Input
                 placeholder="Cari kategori..."
                 value={categorySearch}
-                onChange={e => setCategorySearch(e.target.value)}
+                onChange={e => {
+                  setCategorySearch(e.target.value);
+                  setCategoryFeedback("");
+                }}
+                maxLength={50}
                 aria-label="Cari kategori"
               />
               <div className="mt-2 max-h-48 overflow-y-auto rounded-md border border-gray-200" role="listbox" aria-label="Daftar kategori">
@@ -260,7 +299,10 @@ export default function ProductsPage() {
                       type="button"
                       role="option"
                       aria-selected={newProduct.categoryId === category.id}
-                      onClick={() => setNewProduct({ ...newProduct, categoryId: category.id })}
+                      onClick={() => {
+                        setNewProduct({ ...newProduct, categoryId: category.id });
+                        setCategoryFeedback("");
+                      }}
                       className={`w-full px-4 py-3 text-sm font-medium text-left transition-colors border-b last:border-b-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${newProduct.categoryId === category.id ? "bg-primary/10 text-primary border-primary" : "hover:bg-gray-50 border-gray-200"}`}
                     >
                       {category.name}
@@ -268,9 +310,25 @@ export default function ProductsPage() {
                   ))}
                 </div>
                 {filteredCategories.length === 0 && (
-                  <p className="px-2 py-3 text-center text-sm text-muted">Kategori tidak ditemukan.</p>
+                  <div className="flex flex-col items-center gap-2 px-2 py-3">
+                    <p className="text-center text-sm text-muted">Kategori tidak ditemukan.</p>
+                    {categorySearch.trim() && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={isCreatingCategory}
+                        onClick={handleAddCategory}
+                      >
+                        {isCreatingCategory ? "Menambahkan..." : `Tambah kategori "${categorySearch.trim()}"`}
+                      </Button>
+                    )}
+                  </div>
                 )}
               </div>
+              {categoryFeedback && (
+                <p className="mt-2 text-sm text-critical" role="alert">{categoryFeedback}</p>
+              )}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">

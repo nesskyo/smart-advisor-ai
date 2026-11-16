@@ -221,3 +221,6 @@ CREATE POLICY "Users manage own notifications" ON notifications
 
 CREATE POLICY "Authenticated users can read categories" ON product_categories
   FOR SELECT USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Authenticated users can create categories" ON product_categories
+  FOR INSERT WITH CHECK (auth.role() = 'authenticated');

@@ -38,16 +38,26 @@ Panduan lengkap untuk menghubungkan project ini dengan Supabase (PostgreSQL + Au
    Rumah Tangga, Elektronik, Mainan, Jasa, Produk Digital, Lainnya
    ```
 
+   Pengguna terautentikasi juga dapat menambahkan kategori baru langsung dari form produk.
+   Jika database sudah memakai skema lama, jalankan kebijakan berikut di SQL Editor Supabase:
+
+   ```sql
+   CREATE POLICY "Authenticated users can create categories" ON product_categories
+     FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+   ```
+
 ## 3. Isi `.env.local`
 
 1. Di dashboard Supabase → **Project Settings → API**.
-2. Salin **Project URL** dan **anon public key**.
+2. Salin **Project URL** dan **publishable key** (atau legacy **anon public key**) dari API Keys.
 3. Edit file `.env.local` di root project:
 
    ```
    NEXT_PUBLIC_SUPABASE_URL=https://xxxxxx.supabase.co
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIs...
+   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
    ```
+
+   Jika project Anda masih menggunakan anon key lama, gunakan `NEXT_PUBLIC_SUPABASE_ANON_KEY` sebagai pengganti `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
 
 4. Simpan. (Afterrestart server dev jika sedang berjalan.)
 
